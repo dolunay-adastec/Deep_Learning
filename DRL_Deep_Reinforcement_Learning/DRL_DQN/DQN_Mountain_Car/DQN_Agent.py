@@ -13,6 +13,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from collections import namedtuple, deque
+import sys
+sys.path.insert(0,'/content/Deep_Learning/DRL_Deep_Reinforcement_Learning/DRL_DQN/DQN_Mountain_Car/')
 from Q_Network_Model import QNetwork
 
 # Set the device
