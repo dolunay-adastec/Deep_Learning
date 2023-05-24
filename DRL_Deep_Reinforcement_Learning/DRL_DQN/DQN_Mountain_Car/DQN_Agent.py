@@ -22,9 +22,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BUFFER_SIZE = int(1e5)  # Replay buffer size
 BATCH_SIZE = 64         # Minibatch size
 GAMMA = 0.99            # Discount factor
-TAU = 1e-3              # For soft update of target parameters
-LR = 5e-4               # Learning rate
-UPDATE_EVERY = 4        # How often to update the network
+TAU = 1e-2              # For soft update of target parameters,                         original: 1e-3
+LR = 5e-3               # Learning rate,                                                original: 5e-4
+UPDATE_EVERY = 6        # How often to update the network,                              original: 4
 
 # Set the seed
 random.seed(0)
