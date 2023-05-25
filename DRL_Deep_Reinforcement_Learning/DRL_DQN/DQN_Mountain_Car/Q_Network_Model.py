@@ -14,7 +14,7 @@ class QNetwork(nn.Module):
     """Actor (Policy) Model."""
 
      # Initialize parameters and build model.
-    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64): # 2, 3, 0, 64, 64
+    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64, fc3_units=64): # 2, 3, 0, 64, 64
          """Initialize parameters and build model.
          Params
          ======
@@ -47,4 +47,6 @@ class QNetwork(nn.Module):
         # Pass the state through the second fully connected layer
         x = F.relu(self.fc2(x))
         # Pass the state through the third fully connected layer
-        return self.fc3(x)
+        x = F.relu(self.fc3(x))
+        # Return the output
+        return self.fc4(x)
