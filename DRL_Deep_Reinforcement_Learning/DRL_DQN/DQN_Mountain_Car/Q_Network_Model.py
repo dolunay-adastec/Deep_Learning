@@ -33,7 +33,9 @@ class QNetwork(nn.Module):
          # Create the second fully connected layer
          self.fc2 = nn.Linear(fc1_units, fc2_units)
          # Create the third fully connected layer
-         self.fc3 = nn.Linear(fc2_units, action_size)
+         self.fc3 = nn.Linear(fc2_units, fc3_units)
+         # Create the fourth fully connected layer
+         self.fc4 = nn.Linear(fc3_units, action_size)
 
     # Build a network that maps state -> action values.
     def forward(self, state):
