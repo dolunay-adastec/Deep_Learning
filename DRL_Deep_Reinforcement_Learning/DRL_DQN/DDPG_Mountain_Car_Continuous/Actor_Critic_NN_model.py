@@ -25,7 +25,7 @@ class ActorNetwork(nn.Module):
     """Actor (Policy) Model."""
 
      # Initialize parameters and build model.
-    def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64): # 2, 3, 0, 64, 64
+    def __init__(self, state_size, action_size, seed, fc1_units=400, fc2_units=300): # 2, 3, 0, 64, 64
          """Initialize parameters and build model.
          Params
          ======
@@ -77,7 +77,7 @@ class CriticNetwork(nn.Module):
     """Critic (Value) Model."""
 
     # Initialize parameters and build model.
-    def __init__(self, state_size, action_size, seed, fcs1_units=64, fc2_units=64): # 2, 3, 0, 64, 64
+    def __init__(self, state_size, action_size, seed, fcs1_units=400, fc2_units=300): # 2, 3, 0, 64, 64
         """Initialize parameters and build model.
         Params
         ======

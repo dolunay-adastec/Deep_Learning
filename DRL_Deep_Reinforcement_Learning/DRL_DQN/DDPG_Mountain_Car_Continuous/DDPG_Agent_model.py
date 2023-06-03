@@ -20,18 +20,18 @@ import torch.optim as optim
 # Hyperparameters
 BUFFER_SIZE = int(1e5)  # replay buffer size 
 BATCH_SIZE = 128        # minibatch size (128)
-GAMMA = 0.99            # discount factor (0.99)
+GAMMA = 0.95            # discount factor (0.99)
 TAU = 1e-3              # for soft update of target parameters (1e-3)
-LR_ACTOR = 1e-4         # learning rate of the actor (1e-4)
+LR_ACTOR = 1e-3         # learning rate of the actor (1e-4)
 LR_CRITIC = 1e-3        # learning rate of the critic (1e-4)
 WEIGHT_DECAY = 0        # L2 weight decay (regularization)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Set the seed
-random.seed(0) # set the seed to 0 for reproducibility purposes
-np.random.seed(0) # set the seed to 0 for reproducibility purposes
-torch.manual_seed(0) # set the seed to 0 for reproducibility purposes
+#random.seed(0) # set the seed to 0 for reproducibility purposes
+#np.random.seed(0) # set the seed to 0 for reproducibility purposes
+#torch.manual_seed(0) # set the seed to 0 for reproducibility purposes
 
 class DDPG_Agent():
     """Interacts with and learns from the environment."""
@@ -144,7 +144,7 @@ class DDPG_Agent():
         # Backpropagate the loss
         critic_loss.backward()
         # Clip the gradient to a maximum of 1
-        torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 1) # Gradient clipping is a technique to prevent exploding gradients in very deep networks
+        #torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 1) # Gradient clipping is a technique to prevent exploding gradients in very deep networks
         # Update the weights of the local critic network
         self.critic_optimizer.step()
 
@@ -154,7 +154,8 @@ class DDPG_Agent():
         # Logic is to maximize the loss between the Q values and the actions, which is the same as minimizing the loss between the Q values and the actions with a negative sign
         # ______________________________________________________________________ #
         # Compute the loss between the Q values and the actions
-        actor_loss = -self.critic_local(states, self.actor_local(states)).mean()
+        actions_pred = self.actor_local(states)
+        actor_loss = -self.critic_local(states, actions_pred).mean()
         # Minimize the loss
         self.actor_optimizer.zero_grad() # Clear the gradients
         # Backpropagate the loss
@@ -187,7 +188,7 @@ class OUNoise:
     Source: 1. https://en.wikipedia.org/wiki/Ornstein%E2%80%93Uhlenbeck_process
             2. https://math.stackexchange.com/questions/1287634/implementing-ornstein-uhlenbeck-in-matlab
     """
-    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.2):
+    def __init__(self, size, seed, mu=0., theta=0.5, sigma=0.8): # sigma=0.3
         """Initialize parameters and noise process."""
         # Initialize the parameters
         self.mu = mu * np.ones(size)    # mu is the mean
