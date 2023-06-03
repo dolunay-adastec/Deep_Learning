@@ -2,7 +2,7 @@
 # # Path: DQN_Mountain_Car\Q_Network_Model.py
 # Reference: https://github.com/Bduz/intro_pytorch/blob/main/intro_rl/dqn/model.py
 # Reference: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-# Date: 2021/05/20
+# Date: 2023/05/23
 # Author: Doğacan Dolunay Acar
 # ----------------------------------------------
 # Import libraries
