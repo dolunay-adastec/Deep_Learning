@@ -4,7 +4,7 @@
 # Version: 1.0
 # Status: Development
 # Last Modified Date: 10.08.2021
-# References: https://gitlab.com/diw-evu/emobpy/emobpy/-/tree/master/emobpy
+# References: 
 # References: 
 # _________________________________________________________________
 # Environment Specifications:
@@ -59,14 +59,14 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
         """
         # 2.1 - Defining Environment Variables
         self.action_space = spaces.Discrete(21) # 21 actions: -1, -0.9, -0.8, ..., 0.8, 0.9, 1
-        # 2.2 - Defining Observation Space. Observation Space: x, y, v, a, t, gradient, SOC.
-        self.observation_space = spaces.Box(low=np.array([0, 0, 0, -3.0, 0, -0.04, 0]), high=np.array([10000, 10000, max_velocity, 3.0, 3600, 0.04, 1]), dtype=np.float32) # x, y, v, a, t, gradient, SOC
+        # 2.2 - Defining Observation Space. Observation Space: x, y, v, a, t, gradient, SOC, Power, Energy.
+        self.observation_space = spaces.Box(low=np.array([0, 0, 0, -3.0, 0, -0.04, 0, -float('inf'), -float('inf')]), high=np.array([10000, 10000, max_velocity, 3.0, 3600, 0.04, 1, float('inf'), float('inf')]), dtype=np.float32) # x, y, v, a, t, gradient, SOC
         # 2.3 - Defining Reward Function
         self.reward_function = lambda energy_consumption, time_penalty, x_current, x_prev: - energy_consumption - time_penalty + (10000 if x_current > x_prev else 0)
         # 2.4 - Defining Termination Condition
-        self.termination_condition = lambda x, t: x == 10000 or t == 3600
+        self.termination_condition = lambda x, t: x >= 9999 or t >= 3600
         # 2.5 - Defining Initial State
-        self.initial_state = np.array([0, 0, 0, 0, 0, 0, 0.5]) # x, y, v, a, t, gradient, SOC        
+        self.initial_state = np.array([0, 0, 0, 0, 0, 0, 0.5, 0, 0]) # x, y, v, a, t, gradient, SOC, Power, Energy        
         # 2.6 - Defining Episode Length
         self.episode_length = episode_length
         # 2.7 - Defining Number of Episodes
@@ -76,11 +76,29 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
         # 2.9 - Defining Number of Actions
         self.number_of_actions = 21
         # 2.10 - Defining Number of Observations
-        self.number_of_observations = 7
+        self.number_of_observations = 9
         # 2.11 - Defining Road
-        self.road = emobpy.Road(length=10000, gradient=[0.0, 0.04, 0.0, -0.04, 0.0], gradient_length=[2000, 2000, 2000, 2000, 2000]) # 10000 m. 0-2000 m gradient=0.0, 2000-4000 m gradient=0.04, 4000-6000 m gradient=0.0, 6000-8000 m gradient=-0.04, 8000-10000 m gradient=0
+        D1 = Road_Profiler(0, episode_length/5)  # 100 m. 0-100 m gradient=0
+        D2 = Road_Profiler(0.04, episode_length/5)
+        D3 = Road_Profiler(0, episode_length/5) 
+        D4 = Road_Profiler(-0.04, episode_length/5)
+        D5 = Road_Profiler(0, episode_length/5)
+        R = [D1, D2, D3, D4, D5]
+        self.road = Road_Merger(R)
         # 2.12 - Defining Vehicle
-        self.vehicle = emobpy.Vehicle(mass=8000, frontal_area=5, drag_coefficient=0.3, rolling_resistance_coefficient=0.023, drivetrain_efficiency=0.9, battery_efficiency=0.9, motor_efficiency=0.9, regenerative_braking_efficiency=0.9) # 8000 kg mass, 5 m^2 frontal area, 0.3 drag coefficient, 0.023 rolling resistance coefficient, 0.9 drivetrain efficiency, 0.9 battery efficiency, 0.9 motor efficiency, 0.9 regenerative braking efficiency
+        self.vehicle = "EV"
+        self.vehicle.mass = 8000
+        self.vehicle.frontal_area = 5
+        self.vehicle.drag_coefficient = 0.3
+        self.vehicle.rolling_resistance_coefficient = 0.023
+        self.vehicle.battery_capacity = 300
+        self.vehicle.max_motor_torque = 1140
+        self.vehicle.wheel_radius = 0.3
+        self.vehicle.gear_ratio = 10
+
+
+        
+        = emobpy.Vehicle(mass=8000, frontal_area=5, drag_coefficient=0.3, rolling_resistance_coefficient=0.023, drivetrain_efficiency=0.9, battery_efficiency=0.9, motor_efficiency=0.9, regenerative_braking_efficiency=0.9) # 8000 kg mass, 5 m^2 frontal area, 0.3 drag coefficient, 0.023 rolling resistance coefficient, 0.9 drivetrain efficiency, 0.9 battery efficiency, 0.9 motor efficiency, 0.9 regenerative braking efficiency
         # 2.13 - Defining Battery
         self.battery = emobpy.Battery(capacity=300, power=300, efficiency=0.9) # 300 kWh capacity, 300 kW power, 0.9 efficiency
         # 2.14 - Defining Motor
@@ -223,6 +241,9 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
         # 4.17 - Returning Current State, Current Reward, Current Done, Current Info
         return self.current_state, self.current_reward, self.current_done, self.current_info # Returning Current State, Current Reward, Current Done, Current Info
     
+
+
+
     # 5 - Defining Next State Method
     def next_state(self, state, action):
         """
@@ -238,31 +259,23 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
         # Compute the next state based on the current state and action
         # Return the next state
         # Variables Parsing
-        # 1 - Observation Space: x, y, v, a, t, gradient
+        # 1 - Observation Space: np.array([0, 0, 0, 0, 0, 0, 0.5, 0, 0]) # x, y, v, a, t, gradient, SOC, Power, Energy 
         x = state[0] # Current X Position
         y = state[1] # Current Y Position
         v = state[2] # Current Velocity
         a = state[3] # Current Acceleration
         t = state[4] # Current Time
         gradient = state[5] # Current Gradient
+        SOC = state[6] # Current SOC
+        Power = state[7] # Current Power
+        Energy = state[8] # Current Energy
 
-        # 2 - Action Space: action [-1,0) = brake, 0 = no action, (0,1] = accelerate
-        # action = 1 means full power (max) acceleration based on motor power
-        # action = -1 means full power (max) braking based on regenerative braking power (negative power)
-        # Max acceleration limit is 3.0 m/s^2
-        # Max braking limit is -3.0 m/s^2
-        # Acceleration and braking are limited by the motor power and regenerative braking power
-        # Acceleration is being calculated based on the motor power and regenerative braking power
-        # 
-        # 2.1 - Action Parsing
-        # 2.1.1 - Action Parsing: Acceleration
-        if action > 0: # Acceleration
+        # ____________________________________________
+        x += 1 # Updating X Position (m) every step = 1m
+
 
         
 
-        # 3 - Next State
-        # 3.1 - Next X Position
-        x = x + v * t + 0.5 * a * t * t # Updating Next X Position
 
 
     # Electric Motor Power, Torque, and Speed Calculation
@@ -272,8 +285,8 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
     
     def motor_torque_model(N,pedal_input): # N is the speed in RPM, max speed is 3000 RPM
     
-        T = np.zeros(3000) # T is the torque in Nm
-        P = np.zeros(3000) # P is the power in W
+        T = 0
+        P = 0
 
         if N > 1000:
                 T = 1140 - 0.387 * (N-1000)
@@ -289,8 +302,44 @@ class EV_Energy_Efficiency_Test_Environment(gym.Env):
         # Reference: https://www.researchgate.net/publication/318672012_Electric_vehicle_drive_train_modeling_and_simulation
         # Reference: https://www.researchgate.net/publication/318672012_Electric_vehicle_drive_train_modeling_and_simulation
 
-        def drive_train_model(T, N, v, a, t, gradient): # T is the torque in Nm, N is the speed in RPM, v is the velocity in m/s, a is the acceleration in m/s^2, t is the time in s, gradient is the road gradient in %
-                 
+        #def drive_train_model(T, N, v, a, t, gradient): # T is the torque in Nm, N is the speed in RPM, v is the velocity in m/s, a is the acceleration in m/s^2, t is the time in s, gradient is the road gradient in %
+
+
+
+
+
+
+def Road_Profiler(gradient, distance):
+        D = {}
+        D['gradient'] = gradient
+        D['degree'] = math.atan(D['gradient']) * 180 / math.pi
+        D['radian'] = math.atan(D['gradient'])
+        D['x'] = [i * math.cos(D['radian']) for i in range(distance+1)]
+        if D['radian'] == 0:
+            D['y'] = [0] * (distance+1)
+        else:
+            D['y'] = [i * math.sin(D['radian']) for i in range(distance+1)]
+        D['Distance'] = distance
     
+        return D
+
+
+def Road_Merger(R):
+        Road = {'x': [], 'y': [], 'gradients': [], 'Distances': [], 'Total_Distance': 0}
+
+        road_count = len(R)
     
+        for i in range(road_count):
+            if i == 0:
+                Road['x'].extend(R[i]['x'])
+                Road['y'].extend(R[i]['y'])
+            else:
+                Road['x'].extend([Road['x'][-1] + x for x in R[i]['x'][1:]])
+                Road['y'].extend([Road['y'][-1] + y for y in R[i]['y'][1:]])
+        
+            Road['Distances'].append(R[i]['Distance'])
+            Road['gradients'].append(R[i]['gradient'])
+            Road['Total_Distance'] += R[i]['Distance']
+    
+        return Road
 
