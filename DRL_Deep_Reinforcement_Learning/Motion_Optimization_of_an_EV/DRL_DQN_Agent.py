@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from collections import namedtuple, deque
 import sys
 sys.path.insert(0,'/content/Deep_Learning/DRL_Deep_Reinforcement_Learning/DRL_DQN/DQN_Mountain_Car/')
-from Q_Network_Model import QNetwork
+from DRL_Q_Network_Model import QNetwork
 
 # Set the device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
